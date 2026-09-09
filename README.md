@@ -9,4 +9,4 @@ M3 proof: `MinimapJob` renders overlay rows from `matou-spi` snapshots
 draws, never replaces vanilla render; the bridge owns blitting. Unknown
 cells render as explicit void; bad backend data is refused loudly.
 Self-test `java/test`, gate `tools/check.sh` (zero-MC + sibling-SPI
-compile).
+compile). Writing another client mod? Start at `../spi/AUTHORING.md`.

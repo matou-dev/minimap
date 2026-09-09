@@ -9,8 +9,10 @@ import java.util.Map;
 
 /**
  * M3 client self-test (no JUnit on this gate): every violation prints
- * {@code FAIL minimap : ...} and exits 1. Run by tools/check.sh against the
- * {@code ../spi} sibling checkout.
+ * {@code FAIL minimap : ...} and exits 1. Lambdas are legal (the gate
+ * compiles {@code --release 8}), so refusals are one-liners, never
+ * anonymous classes. Run by tools/check.sh against the {@code ../spi}
+ * sibling checkout.
  */
 public final class MinimapCheck {
     private MinimapCheck() {}
@@ -77,10 +79,8 @@ public final class MinimapCheck {
                 "world id");
         check(MinimapJob.RADIUS.toString().equals("minimap:radius"),
                 "radius id");
-        expectRefused(new Runnable() {
-            public void run() {
-                MatouId.parse("player");
-            }
+        expectRefused(() -> {
+            MatouId.parse("player");
         }, "bare ident");
 
         // --- golden 3x3: exact rows, void explicit around known cells ---
@@ -111,48 +111,46 @@ public final class MinimapCheck {
             System.out.println("ok minimap : rows immutable");
         }
 
+        // --- max radius: boundary renders, shapes hold, still pure ---
+        List<String> wide = job.decide(snap("0,0",
+                new HashMap<String, String>(), Long.valueOf(8L)));
+        check(wide.size() == 17, "max radius rows");
+        boolean wideVoid = true;
+        for (String row : wide) {
+            wideVoid &= row.length() == 17
+                    && row.equals(".................");
+        }
+        check(wideVoid, "max radius all void");
+        check(wide.equals(job.decide(snap("0,0",
+                new HashMap<String, String>(), Long.valueOf(8L)))),
+                "max radius pure");
+
         // --- backend data: missing or malformed is refused, never guessed ---
-        expectNullRefused(new Runnable() {
-            public void run() {
-                job.decide(null);
-            }
+        expectNullRefused(() -> {
+            job.decide(null);
         }, "null snapshot");
-        expectRefused(new Runnable() {
-            public void run() {
-                job.decide(snap(null, world(), Long.valueOf(1L)));
-            }
+        expectRefused(() -> {
+            job.decide(snap(null, world(), Long.valueOf(1L)));
         }, "missing player");
-        expectRefused(new Runnable() {
-            public void run() {
-                job.decide(snap("0,0", null, Long.valueOf(1L)));
-            }
+        expectRefused(() -> {
+            job.decide(snap("0,0", null, Long.valueOf(1L)));
         }, "missing world");
-        expectRefused(new Runnable() {
-            public void run() {
-                job.decide(snap("0,0", world(), null));
-            }
+        expectRefused(() -> {
+            job.decide(snap("0,0", world(), null));
         }, "missing radius");
-        expectRefused(new Runnable() {
-            public void run() {
-                job.decide(snap("here", world(), Long.valueOf(1L)));
-            }
+        expectRefused(() -> {
+            job.decide(snap("here", world(), Long.valueOf(1L)));
         }, "bad player shape");
-        expectRefused(new Runnable() {
-            public void run() {
-                job.decide(snap("0,0", world(), Long.valueOf(0L)));
-            }
+        expectRefused(() -> {
+            job.decide(snap("0,0", world(), Long.valueOf(0L)));
         }, "radius 0");
-        expectRefused(new Runnable() {
-            public void run() {
-                job.decide(snap("0,0", world(), Long.valueOf(9L)));
-            }
+        expectRefused(() -> {
+            job.decide(snap("0,0", world(), Long.valueOf(9L)));
         }, "radius over max");
-        expectRefused(new Runnable() {
-            public void run() {
-                Map<String, String> bad = world();
-                bad.put("0,0", "##");
-                job.decide(snap("0,0", bad, Long.valueOf(1L)));
-            }
+        expectRefused(() -> {
+            Map<String, String> bad = world();
+            bad.put("0,0", "##");
+            job.decide(snap("0,0", bad, Long.valueOf(1L)));
         }, "bad glyph");
 
         System.out.println("ok minimap : all");
